@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Flow Studio Pro</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --surface: #111622;
+      --surface-card: #161d2d;
+      --surface-elevated: #1e273d;
+      --border: #26334d;
+      --border-focus: #00d2ff;
+      --accent: #00d2ff;
+      --accent-glow: rgba(0, 210, 255, 0.25);
+      --purple: #9d4edd;
+      --gold: #ffb703;
+      --gold-glow: rgba(255, 183, 3, 0.3);
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --text-bright: #ffffff;
+      --text-muted: #8492a6;
+      --radius: 14px;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    /* Prevents Android Chrome iframe touch lock */
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #app-scroller {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      padding-bottom: 110px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Fixed Glass Top Bar */
+    header {
+      background: rgba(11, 15, 25, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      letter-spacing: -0.3px;
+    }
+    .badge-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.3s;
+    }
+    .badge-cloud { background: rgba(157, 78, 221, 0.2); color: #c77dff; border: 1px solid #9d4edd; }
+    .badge-live { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+
+    /* In-App Toast Notification */
+    #toastBox {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 29, 45, 0.98);
+      border: 1.5px solid var(--accent);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      z-index: 100000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      display: none;
+      pointer-events: none;
+      text-align: center;
+      max-width: 90%;
+      word-break: break-word;
+    }
+
+    /* Elevated Bottom Navigation Bar */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(13, 18, 30, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 4px calc(18px + env(safe-area-inset-bottom, 0px));
+      min-height: 64px;
+      z-index: 99999;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .nav-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 2px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), color 0.15s;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .nav-btn * { pointer-events: none; }
+    .nav-btn .nav-icon { font-size: 1.25rem; transition: transform 0.2s; }
+    .nav-btn:active { transform: scale(0.88); }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active .nav-icon {
+      transform: translateY(-2px);
+      filter: drop-shadow(0 0 8px var(--accent));
+    }
+    .nav-badge-count {
+      background: var(--purple);
+      color: #fff;
+      font-size: 0.6rem;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-left: 2px;
+    }
+
+    /* Panes */
+    .pane {
+      display: none;
+      padding: 14px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .pane.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .card-hero {
+      background: linear-gradient(145deg, #161e31, #0e1422);
+      border: 1px solid rgba(0, 210, 255, 0.35);
+      box-shadow: 0 6px 24px rgba(0, 210, 255, 0.1);
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .subtitle {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    /* Inputs */
+    label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: #090d15;
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    button {
+      width: 100%;
+      background: var(--surface-elevated);
+      color: var(--text-bright);
+      border: 1px solid var(--border);
+      padding: 13px 16px;
+      border-radius: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), filter 0.15s;
+    }
+    button:active {
+      transform: scale(0.96);
+      filter: brightness(1.2);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #00d2ff, #0088ff);
+      color: #000;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+    }
+    button.gold {
+      background: linear-gradient(135deg, #ffb703, #fb8500);
+      color: #000;
+      border: none;
+      box-shadow: 0 4px 18px var(--gold-glow);
+    }
+    button.success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    button.danger {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+    }
+    button.small {
+      width: auto;
+      padding: 7px 12px;
+      font-size: 0.76rem;
+      border-radius: 8px;
+    }
+
+    .scene-card {
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent);
+    }
+    .prompt-box {
+      background: #05070c;
+      border: 1px solid #1c2638;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #7dd3fc;
+      margin: 8px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: all;
+    }
+    .dialogue-box {
+      background: #141c2b;
+      border-left: 3px solid var(--gold);
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      color: #f1f5f9;
+      margin: 8px 0;
+    }
+
+    .loader-pulse {
+      display: none;
+      text-align: center;
+      padding: 12px;
+      font-size: 0.82rem;
+      color: var(--gold);
+      animation: pulseText 1.4s infinite ease-in-out;
+    }
+    @keyframes pulseText { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification Box -->
+  <div id="toastBox">Notification</div>
+
+  <!-- Main Scrollable App Container -->
+  <div id="app-scroller">
+    <!-- Top Glass Header -->
+    <header>
+      <h1>🎬 Flow Studio <span style="color:var(--accent);">Pro</span></h1>
+      <div style="display:flex; gap:6px;">
+        <span class="badge-pill badge-live" id="headerStatus">⚡ Ready</span>
+      </div>
+    </header>
+
+    <!-- PANE 1: AUTO-DIRECTOR -->
+    <div id="pane-direct" class="pane active">
+      <div class="card">
+        <div class="card-title">
+          <span>🔑 Google AI Studio Key Pool</span>
+          <button type="button" class="small" data-action="switch-nav" data-pane="pane-cloud">⚙️ Settings</button>
+        </div>
+        <p class="subtitle">Separate multiple keys with commas (<code>AQ..., AIza...</code>). Keys are stored inside your Google Sheet table.</p>
+        <input type="password" id="apiKeyInput" placeholder="Paste your API key(s)..." />
+        
+        <div class="grid-2">
+          <div>
+            <label>Director LLM</label>
+            <select id="directorModel">
+              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              <option value="gemini-3.8">Gemini 3.8</option>
+              <option value="gemini-3.6">Gemini 3.6</option>
+              <option value="gemini-3.5">Gemini 3.5</option>
+              <option value="gemini-3.1">Gemini 3.1</option>
+              <option value="custom">Custom Model Name...</option>
+            </select>
+            <input type="text" id="customDirectorModel" placeholder="Enter custom model (e.g. gemini-3.8)..." style="display:none; margin-top:6px;" />
+          </div>
+          <div>
+            <label>503/429 Failover</label>
+            <select id="autoFailover">
+              <option value="true" selected>Auto-Switch (Enabled)</option>
+              <option value="false">Manual Only</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-hero">
+        <div class="card-title" style="color:var(--accent);">
+          <span>⚡ 1-Tap Auto-Director</span>
+          <span class="badge-pill badge-cloud">Gemini AI</span>
+        </div>
+        <p class="subtitle">Paste any story, YouTube concept, or script. Gemini automatically directs actors, camera styles, and scenes.</p>
+        
+        <textarea id="storyInput" rows="5" placeholder="Example: A cyber detective named Vance discovers a dangerous glitch. Lyra rushes to warn him that the containment core is collapsing...">A gritty cyber detective named Vance discovers a dangerous glitch inside the orbital defense grid. His frantic engineer partner Lyra races to warn him that the containment core is collapsing and they must abandon the bridge.</textarea>
+
+        <button type="button" class="gold" id="btnAutoDirect" data-action="auto-direct">
+          ⚡ Ingest & Auto-Direct Production
+        </button>
+        <div id="directLoader" class="loader-pulse">
+          ⏳ Directing: Extracting actors, setting camera styles, and breaking down scenes...
+        </div>
+      </div>
+
+      <!-- Manual Storyboard Splitter Fallback -->
+      <div class="card">
+        <div class="card-title">📝 Manual Script Splitter</div>
+        <p class="subtitle">Already have scene-by-scene text? Split manually without using LLM tokens.</p>
+        <textarea id="manualStoryInput" rows="3" placeholder="Scene 1: Captain Vance stands on the bridge...&#10;Scene 2: Lyra races to the terminal..."></textarea>
+        <button type="button" id="btnManualSplit" data-action="manual-split">✂️ Split Scenes Manually</button>
+      </div>
+    </div>
+
+    <!-- PANE 2: CAST & STYLE -->
+    <div id="pane-cast" class="pane">
+      <div class="card">
+        <div class="card-title">
+          <span>👥 Character Vault</span>
+          <button type="button" class="small" id="btnAddChar" data-action="add-character">+ Add Actor</button>
+        </div>
+        <p class="subtitle">Lock visual features and select from prebuilt Google AI Studio TTS voices.</p>
+        <div id="characterList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎥 Cinematography Anchors</div>
+        <label>Visual Aesthetic</label>
+        <input type="text" id="styleVisual" value="Cinematic 35mm film, anamorphic lens, shallow depth of field, natural film grain" />
+        <label>Lighting & Color Grading</label>
+        <input type="text" id="styleLighting" value="Moody volumetric golden-hour lighting, teal and warm amber color grading" />
+        <label>Camera Rig</label>
+        <input type="text" id="styleCamera" value="Smooth Steadicam orbit, subtle slow-motion 60fps feel" />
+        <label>Negative Anchor (--no)</label>
+        <input type="text" id="styleNegative" value="cgi, 3d render, cartoon, plastic skin, jitter, blurry" />
+        <button type="button" class="primary small" id="btnRefreshPrompts" data-action="refresh-prompts">🔄 Refresh All Prompts</button>
+      </div>
+    </div>
+
+    <!-- PANE 3: SCENES -->
+    <div id="pane-scenes" class="pane">
+      <div class="card">
+        <div class="card-title">
+          <span>🎬 Production Scenes</span>
+          <span class="badge-pill badge-cloud" id="sceneCountBadge">0 Scenes</span>
+        </div>
+        <div class="grid-2">
+          <button type="button" class="small" id="btnCopyAllJson" data-action="copy-all-json">📋 Copy All (JSON)</button>
+          <button type="button" class="small primary" data-action="switch-nav" data-pane="pane-voice">🎙️ Go to Voice Lab ➔</button>
+        </div>
+      </div>
+      <div id="scenesContainer">
+        <div style="text-align:center; padding:35px 20px; color:var(--text-muted);">
+          No scenes yet. Tap <strong>⚡ Direct</strong> to generate your production!
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE 4: VOICE LAB -->
+    <div id="pane-voice" class="pane">
+      <div class="card">
+        <div class="card-title">
+          <span>🎙️ Voice Engine & Acoustics</span>
+          <span class="badge-pill badge-live">Gemini TTS</span>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>TTS Model Version</label>
+            <select id="ttsModel">
+              <option value="gemini-2.5-flash-preview-tts" selected>Gemini 2.5 Flash Preview TTS</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-3.8-tts">Gemini 3.8 TTS</option>
+              <option value="gemini-3.5-tts">Gemini 3.5 TTS</option>
+            </select>
+          </div>
+          <div>
+            <label>Acoustic Mastering</label>
+            <select id="audioMastering">
+              <option value="studio" selected>Studio DSP (EQ + Compressor)</option>
+              <option value="raw">Raw Audio Stream</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master Continuous Audio Track -->
+      <div class="card card-hero">
+        <div class="card-title" style="color:var(--accent);">
+          <span>🎧 Master Story Audio Track</span>
+          <span class="badge-pill badge-cloud">Continuous WAV</span>
+        </div>
+        <p class="subtitle">Stitches all dialogue lines with 2.5s pacing pauses using each character's assigned voice.</p>
+        
+        <button type="button" class="success" id="btnMasterAudio" data-action="render-master-audio" style="margin-bottom:10px;">
+          ▶ Render Full Master Audio Track
+        </button>
+
+        <div class="grid-2">
+          <button type="button" class="gold" id="btnDownloadDevice" data-action="download-master-device" disabled style="opacity:0.6;">
+            ⬇ Save to Device (WAV)
+          </button>
+          <button type="button" class="primary" id="btnUploadDrive" data-action="upload-drive" disabled style="opacity:0.6;">
+            ☁️ Save to Google Drive
+          </button>
+        </div>
+
+        <audio id="masterAudioPlayer" controls style="width:100%; margin-top:14px; display:none;"></audio>
+        <div id="driveResultBox" style="margin-top:10px; font-size:0.8rem; display:none;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Individual Scene Auditions</div>
+        <p class="subtitle">Audition each line with the character's designated voice. Tweak dialogue and re-record as needed.</p>
+        <div id="audioScenesContainer">
+          <div style="text-align:center; padding:20px; color:var(--text-muted);">Direct your scenes first.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE 5: CLOUD DB & SETTINGS -->
+    <div id="pane-cloud" class="pane">
+      <div class="card">
+        <div class="card-title">
+          <span>☁️ Connected Google Sheet Tables</span>
+          <span class="badge-pill badge-cloud" id="sheetBadge">Connecting...</span>
+        </div>
+        <p class="subtitle">Paste your Google Sheet URL. The app automatically creates <code>API_Keys</code>, <code>Projects</code>, and <code>Config</code> tables inside it:</p>
+        
+        <label>Google Sheet URL</label>
+        <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/..." />
+        <button type="button" class="primary" id="btnSaveConfig" data-action="save-sheet-config">
+          💾 Save Sheet & API Keys to Cloud
+        </button>
+        <div id="configFeedback" style="font-size:0.8rem; color:#34d399; margin-top:8px; display:none;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💾 Save Current Production to Sheet</div>
+        <label>Project Title</label>
+        <input type="text" id="projectTitle" value="Sci-Fi Series Episode 1" />
+        <button type="button" class="success" id="btnSaveSheet" data-action="save-project-sheet">
+          💾 Save Project to Sheet
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📁 Previous Productions</div>
+        <button type="button" class="small" id="btnFetchSaved" data-action="fetch-saved">🔄 Refresh Saved List</button>
+        <div id="savedListContainer" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Thumb Navigation Bar -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button type="button" class="nav-btn active" data-action="switch-nav" data-pane="pane-direct">
+      <span class="nav-icon">⚡</span>
+      <span>Direct</span>
+    </button>
+    <button type="button" class="nav-btn" data-action="switch-nav" data-pane="pane-cast">
+      <span class="nav-icon">👥</span>
+      <span>Cast</span>
+    </button>
+    <button type="button" class="nav-btn" data-action="switch-nav" data-pane="pane-scenes">
+      <span class="nav-icon">🎬</span>
+      <span>Scenes <span class="nav-badge-count" id="navSceneCount">0</span></span>
+    </button>
+    <button type="button" class="nav-btn" data-action="switch-nav" data-pane="pane-voice">
+      <span class="nav-icon">🎙️</span>
+      <span>Voice</span>
+    </button>
+    <button type="button" class="nav-btn" data-action="switch-nav" data-pane="pane-cloud">
+      <span class="nav-icon">☁️</span>
+      <span>Cloud</span>
+    </button>
+  </nav>
+
+  <script>
+    /* ============================================================================
+       🎬 FLOW STUDIO PRO - CLIENT ENGINE (Universal Mobile & Apps Script)
+       ============================================================================ */
+
+    window.addEventListener('error', function(e) {
+      console.error("Studio Error:", e.message || e);
+      if (typeof notify === 'function') notify("⚠️ " + (e.message || "Script execution error"), true);
+    });
+
+    const GOOGLE_VOICES = [
+      { name: "Aoede", desc: "Breezy / Expressive Female" },
+      { name: "Charon", desc: "Informative / Deep Male" },
+      { name: "Fenrir", desc: "Excitable / Intense Male" },
+      { name: "Kore", desc: "Firm / Assertive Female" },
+      { name: "Puck", desc: "Upbeat / Vibrant Male" },
+      { name: "Zephyr", desc: "Bright / Warm Female" },
+      { name: "Sulafat", desc: "Warm / Empathetic Female" },
+      { name: "Achernar", desc: "Soft / Intimate Male" },
+      { name: "Alnilam", desc: "Firm / Authoritative Male" },
+      { name: "Schedar", desc: "Even / Documentary Male" },
+      { name: "Gacrux", desc: "Mature / Gravelly Male" },
+      { name: "Leda", desc: "Youthful / Energetic Female" },
+      { name: "Orus", desc: "Firm / Heroic Male" },
+      { name: "Callirrhoe", desc: "Easy-going / Natural Female" },
+      { name: "Autonoe", desc: "Bright / Playful Female" },
+      { name: "Enceladus", desc: "Breathy / Whispering Male" },
+      { name: "Iapetus", desc: "Clear / Articulate Male" },
+      { name: "Umbriel", desc: "Casual / Laid-back Male" },
+      { name: "Algieba", desc: "Smooth / Storyteller Male" },
+      { name: "Despina", desc: "Smooth / Calming Female" },
+      { name: "Erinome", desc: "Clear / Precise Female" },
+      { name: "Algenib", desc: "Gravelly / Gritty Male" },
+      { name: "Rasalgethi", desc: "Informative / Deep Male" },
+      { name: "Laomedeia", desc: "Upbeat / Cheerful Female" },
+      { name: "Pulcherrima", desc: "Forward / Confident Female" },
+      { name: "Achird", desc: "Friendly / Approachable Male" },
+      { name: "Zubenelgenubi", desc: "Casual / Modern Male" },
+      { name: "Vindemiatrix", desc: "Gentle / Tender Female" },
+      { name: "Sadachbia", desc: "Lively / Quick Female" },
+      { name: "Sadaltager", desc: "Knowledgeable / Grounded Male" }
+    ];
+
+    let characters = [
+      {
+        id: "char_1",
+        name: "Captain Vance",
+        anchor: "Weathered 42-year-old starship commander, salt-and-pepper cropped beard, scar over left eyebrow, dark navy high-collar naval duty tunic",
+        voice: "Charon",
+        defaultStyle: "deep, commanding, tense urgency"
+      },
+      {
+        id: "char_2",
+        name: "Dr. Lyra",
+        anchor: "Sharp 30-year-old quantum astrophysicist, auburn hair tied back in loose braid, perceptive hazel eyes, insulated grey flight suit",
+        voice: "Aoede",
+        defaultStyle: "intelligent, breathless, emotional determination"
+      }
+    ];
+
+    let generatedScenes = [];
+    let masterAudioWavBlob = null;
+    let masterAudioBase64 = null;
+    let currentMasterDriveUrl = "";
+    let keyIndex = 0;
+    let audioCtx = null;
+
+    const inMemStore = {};
+    const safeStorage = {
+      getItem(k) {
+        try {
+          if (window.localStorage) {
+            const v = localStorage.getItem(k);
+            if (v !== null) return v;
+          }
+        } catch(e) {}
+        return inMemStore[k] || null;
+      },
+      setItem(k, v) {
+        inMemStore[k] = v;
+        try { if (window.localStorage) localStorage.setItem(k, v); } catch(e) {}
+      }
+    };
+
+    function isGAS() {
+      return typeof google !== 'undefined' && google.script && Boolean(google.script.run);
+    }
+
+    function notify(msg, isError = false) {
+      const box = document.getElementById('toastBox');
+      if (!box) return;
+      box.innerText = msg;
+      box.style.borderColor = isError ? 'var(--danger)' : 'var(--accent)';
+      box.style.color = isError ? '#ff8080' : '#ffffff';
+      box.style.display = 'block';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { box.style.display = 'none'; }, 3400);
+    }
+
+    function safeCopy(text, label) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          notify(`Copied ${label || 'text'}!`);
+        }).catch(() => fallbackCopy(text, label));
+      } else {
+        fallbackCopy(text, label);
+      }
+    }
+
+    function fallbackCopy(text, label) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        notify(`Copied ${label || 'text'}!`);
+      } catch (e) {
+        notify("Copy failed. Please copy manually.", true);
+      }
+      document.body.removeChild(ta);
+    }
+
+    function switchNav(paneId) {
+      if (!paneId) return;
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+      const targetPane = document.getElementById(paneId);
+      if (targetPane) targetPane.classList.add('active');
+
+      const targetBtn = document.querySelector(`.nav-btn[data-pane="${paneId}"]`);
+      if (targetBtn) targetBtn.classList.add('active');
+
+      const scroller = document.getElementById('app-scroller');
+      if (scroller) {
+        try { scroller.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { scroller.scrollTop = 0; }
+      }
+    }
+
+    function saveLocalKey() {
+      const input = document.getElementById('apiKeyInput');
+      if (!input) return;
+      const k = input.value.trim();
+      safeStorage.setItem('flow_api_keys', k);
+      if (isGAS()) {
+        const u = document.getElementById('sheetUrlInput') ? document.getElementById('sheetUrlInput').value.trim() : '';
+        try { google.script.run.saveAppSettings({ sheetUrl: u, apiKeys: k }); } catch(e) {}
+      }
+    }
+
+    function getApiKeys() {
+      const el = document.getElementById('apiKeyInput');
+      const val = el ? el.value.trim() : '';
+      return val.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 5);
+    }
+
+    function getNextApiKey() {
+      const keys = getApiKeys();
+      if (!keys.length) return null;
+      const key = keys[keyIndex % keys.length];
+      keyIndex++;
+      return key;
+    }
+
+    function getSelectedDirectorModel() {
+      const select = document.getElementById('directorModel');
+      if (!select) return 'gemini-2.5-flash';
+      if (select.value === 'custom') {
+        const customInput = document.getElementById('customDirectorModel');
+        return (customInput && customInput.value.trim()) ? customInput.value.trim() : 'gemini-2.5-flash';
+      }
+      return select.value;
+    }
+
+    function getAudioContext() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    /* --- AUTO-DIRECTOR --- */
+    async function triggerAutoDirector() {
+      const keys = getApiKeys();
+      const storyEl = document.getElementById('storyInput');
+      const story = storyEl ? storyEl.value.trim() : '';
+      const model = getSelectedDirectorModel();
+      const autoFailover = document.getElementById('autoFailover').value === 'true';
+
+      if (!keys.length) {
+        switchNav('pane-direct');
+        document.getElementById('apiKeyInput').focus();
+        return notify("⚠️ Please paste your Gemini API key above first!", true);
+      }
+      if (!story) return notify("Please enter a story or concept.", true);
+
+      const btn = document.getElementById('btnAutoDirect');
+      const loader = document.getElementById('directLoader');
+      btn.disabled = true;
+      loader.style.display = 'block';
+
+      const promptText = `Act as an elite film director and cinematic concept artist for Google Flow.
+Analyze this user storyline:
+"""${story}"""
+
+Available Voice Models:
+${GOOGLE_VOICES.map(v => v.name + " (" + v.desc + ")").join(", ")}
+
+Output a valid JSON production breakdown:
+{
+  "style": { "visual": "...", "lighting": "...", "camera": "...", "negative": "..." },
+  "characters": [{ "name": "...", "anchor": "Detailed visual description", "voice": "Aoede", "defaultStyle": "..." }],
+  "scenes": [{ "number": 1, "character": "...", "action": "...", "dialogue": "Clean line without action cues", "speechStyle": "..." }]
+}`;
+
+      const modelChain = autoFailover 
+        ? [model, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.8', 'gemini-3.5']
+        : [model];
+      const uniqueModels = [...new Set(modelChain)];
+
+      let production = null;
+      let usedModel = model;
+
+      for (let m of uniqueModels) {
+        loader.innerHTML = `⏳ Directing with <strong>${m}</strong>...`;
+        const activeKey = getNextApiKey() || keys[0];
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${activeKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: promptText }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+
+          if (!res.ok) {
+            if (res.status === 503 || res.status === 429) continue;
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error?.message || `HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          production = JSON.parse(data.candidates[0].content.parts[0].text);
+          usedModel = m;
+          break;
+        } catch (e) {
+          console.warn(`Model ${m} failed:`, e);
+        }
+      }
+
+      btn.disabled = false;
+      loader.style.display = 'none';
+
+      if (!production) return notify("Generation failed. Check your API key or quota.", true);
+
+      if (production.style) {
+        if (production.style.visual) document.getElementById('styleVisual').value = production.style.visual;
+        if (production.style.lighting) document.getElementById('styleLighting').value = production.style.lighting;
+        if (production.style.camera) document.getElementById('styleCamera').value = production.style.camera;
+        if (production.style.negative) document.getElementById('styleNegative').value = production.style.negative;
+      }
+
+      if (production.characters && production.characters.length) {
+        characters = production.characters.map((c, i) => ({
+          id: `char_${i+1}`,
+          name: c.name || `Actor ${i+1}`,
+          anchor: c.anchor || "Distinct clothing and physical traits",
+          voice: c.voice || "Aoede",
+          defaultStyle: c.defaultStyle || "natural human tone"
+        }));
+        renderCharacters();
+      }
+
+      if (production.scenes && production.scenes.length) {
+        generatedScenes = production.scenes.map((s, i) => {
+          const num = s.number || (i + 1);
+          const charObj = characters.find(c => c.name.toLowerCase() === (s.character || '').toLowerCase()) || characters[0];
+          return {
+            id: `sc_${num}`,
+            number: num,
+            action: s.action,
+            character: charObj.name,
+            voice: charObj.voice,
+            dialogue: s.dialogue || s.action,
+            style: s.speechStyle || charObj.defaultStyle,
+            flowPrompt: buildDirectorPrompt(num, s.action, charObj),
+            pcmBytes: null,
+            audioBlob: null
+          };
+        });
+        renderScenes();
+        renderAudioScenes();
+        switchNav('pane-scenes');
+        notify(`🎬 Directed via ${usedModel}! (${generatedScenes.length} scenes)`);
+      }
+    }
+
+    function buildDirectorPrompt(sceneNum, action, character) {
+      const visual = document.getElementById('styleVisual').value;
+      const lighting = document.getElementById('styleLighting').value;
+      const camera = document.getElementById('styleCamera').value;
+      const negative = document.getElementById('styleNegative').value;
+
+      return `[SCENE ${sceneNum}]
+ACTION: ${action}.
+SUBJECT: ${character.name}, ${character.anchor}.
+CAMERA: ${camera}.
+LIGHTING & TONE: ${lighting}, ${visual}.
+--no ${negative}`;
+    }
+
+    function runManualStoryboardSplit() {
+      const raw = document.getElementById('manualStoryInput').value.trim();
+      if (!raw) return notify("Paste text into manual script box first.", true);
+
+      const sceneBlocks = raw.split(/\n(?=Scene\s*\d+:?)/i).filter(s => s.trim().length > 0);
+      if (!sceneBlocks.length) return notify("Could not detect Scene blocks.", true);
+
+      generatedScenes = sceneBlocks.map((block, idx) => {
+        const scNum = idx + 1;
+        let matchedChar = characters[0];
+        for (const c of characters) {
+          if (block.toLowerCase().includes(c.name.toLowerCase())) {
+            matchedChar = c;
+            break;
+          }
+        }
+
+        let action = block.replace(/Scene\s*\d+:?/i, '').trim();
+        let dialogue = action;
+        const quoteMatch = block.match(/["“](.+?)["”]/);
+        if (quoteMatch) dialogue = quoteMatch[1];
+
+        return {
+          id: `sc_${scNum}`,
+          number: scNum,
+          action: action,
+          character: matchedChar.name,
+          voice: matchedChar.voice,
+          dialogue: dialogue,
+          style: matchedChar.defaultStyle,
+          flowPrompt: buildDirectorPrompt(scNum, action, matchedChar),
+          pcmBytes: null,
+          audioBlob: null
+        };
+      });
+
+      renderScenes();
+      renderAudioScenes();
+      switchNav('pane-scenes');
+      notify(`✂️ Split ${generatedScenes.length} scenes manually!`);
+    }
+
+    /* --- CHARACTER VAULT --- */
+    function addCharacter() {
+      const id = 'char_' + Date.now();
+      const num = characters.length + 1;
+      characters.push({
+        id: id,
+        name: `Actor ${num}`,
+        anchor: "Distinct clothing, facial traits, and aesthetic lock",
+        voice: GOOGLE_VOICES[(characters.length * 3) % GOOGLE_VOICES.length].name,
+        defaultStyle: "natural conversational, clear human tone"
+      });
+      renderCharacters();
+      notify(`Added Actor #${num}. Edit name and voice directly.`);
+    }
+
+    function removeCharacter(id) {
+      if (characters.length <= 1) return notify("You must keep at least one actor.", true);
+      characters = characters.filter(c => c.id !== id);
+      renderCharacters();
+    }
+
+    function updateChar(id, key, val) {
+      const char = characters.find(c => c.id === id);
+      if (char) char[key] = val;
+    }
+
+    function copyTurnaroundSheet(charId) {
+      const char = characters.find(c => c.id === charId);
+      if (!char) return;
+      const prompt = `[FLOW CHARACTER TURNAROUND SHEET]
+Subject: ${char.name}, ${char.anchor}.
+Format: 4-panel split character concept turnaround reference sheet.
+Panels: Front view, 45-degree three-quarter view, profile side view, and back view.
+Background: Solid neutral studio slate grey background, clean studio lighting, full body shot, high-definition character design bible, symmetrical proportions, zero motion blur, ultra crisp facial features.`;
+      safeCopy(prompt, `Turnaround prompt for ${char.name}`);
+    }
+
+    function renderCharacters() {
+      const c = document.getElementById('characterList');
+      if (!c) return;
+      c.innerHTML = characters.map((char, index) => `
+        <div style="background:#090d15; border:1px solid var(--border); padding:12px; border-radius:10px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:var(--accent);">Actor #${index + 1}: ${char.name}</strong>
+            ${characters.length > 1 ? `<button type="button" class="small danger" style="padding:3px 7px; font-size:0.7rem;" data-action="remove-char" data-id="${char.id}">✕</button>` : ''}
+          </div>
+          <div class="grid-2">
+            <div>
+              <label>Name</label>
+              <input type="text" value="${char.name}" data-change="char-prop" data-prop="name" data-id="${char.id}" />
+            </div>
+            <div>
+              <label>Flow Voice</label>
+              <select data-change="char-prop" data-prop="voice" data-id="${char.id}">
+                ${GOOGLE_VOICES.map(v => `<option value="${v.name}" ${v.name === char.voice ? 'selected' : ''}>${v.name} (${v.desc})</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <label>Visual Identity Anchor</label>
+          <textarea rows="2" data-change="char-prop" data-prop="anchor" data-id="${char.id}">${char.anchor}</textarea>
+          <div class="grid-2">
+            <div>
+              <label>Speech Delivery</label>
+              <input type="text" value="${char.defaultStyle}" data-change="char-prop" data-prop="defaultStyle" data-id="${char.id}" />
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+              <button type="button" class="small" style="margin-bottom:12px;" data-action="copy-turnaround" data-id="${char.id}">
+                📋 Turnaround Prompt
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* --- STYLE REFRESH --- */
+    function updatePromptsWithStyles() {
+      if (!generatedScenes.length) return notify("Generate scenes in 'Direct' first.", true);
+      generatedScenes.forEach(sc => {
+        const charObj = characters.find(c => c.name.toLowerCase() === sc.character.toLowerCase()) || characters[0];
+        sc.flowPrompt = buildDirectorPrompt(sc.number, sc.action, charObj);
+      });
+      renderScenes();
+      notify("✅ Scene prompts refreshed with cinematography anchors!");
+    }
+
+    function renderScenes() {
+      const countBadge = document.getElementById('sceneCountBadge');
+      const navCount = document.getElementById('navSceneCount');
+      if (countBadge) countBadge.innerText = `${generatedScenes.length} Scenes`;
+      if (navCount) navCount.innerText = generatedScenes.length;
+      
+      const c = document.getElementById('scenesContainer');
+      if (!c) return;
+      if (!generatedScenes.length) {
+        c.innerHTML = `<div style="text-align:center; padding:35px 20px; color:var(--text-muted);">No scenes yet. Tap <strong>⚡ Direct</strong> to generate your production!</div>`;
+        return;
+      }
+      c.innerHTML = generatedScenes.map((sc, i) => `
+        <div class="scene-card">
+          <strong style="color:#fff;">Scene ${sc.number}: ${sc.character} (${sc.voice})</strong>
+          <div class="prompt-box">${sc.flowPrompt}</div>
+          <button type="button" class="small" data-action="copy-scene-prompt" data-index="${i}">📋 Copy Flow Prompt</button>
+          <div class="dialogue-box">
+            <strong>Line:</strong> <span contenteditable="true" data-blur="update-dialogue" data-id="${sc.id}">${sc.dialogue}</span><br>
+            <small style="color:var(--text-muted);">🎭 Acting: ${sc.style}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function copyScenePrompt(index) {
+      const sc = generatedScenes[index];
+      if (sc) safeCopy(sc.flowPrompt, `Scene ${sc.number} Prompt`);
+    }
+
+    function updateSceneText(sceneId, text) {
+      const sc = generatedScenes.find(s => s.id === sceneId);
+      if (sc) {
+        sc.dialogue = text.trim();
+        sc.pcmBytes = null;
+      }
+    }
+
+    function renderAudioScenes() {
+      const c = document.getElementById('audioScenesContainer');
+      if (!c) return;
+      if (!generatedScenes.length) {
+        c.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">Direct your scenes first.</div>`;
+        return;
+      }
+      c.innerHTML = generatedScenes.map(sc => `
+        <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>Scene ${sc.number}: ${sc.character} (${sc.voice})</strong>
+            <button type="button" class="small primary" id="btn_synth_${sc.id}" data-action="audition-line" data-id="${sc.id}">🎙️ Record (${sc.voice})</button>
+          </div>
+          <p style="font-size:0.82rem; margin:6px 0; color:#cbd5e1;">"${sc.dialogue}"</p>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+            <audio id="audio_${sc.id}" controls style="display:none; height:32px; max-width:210px;"></audio>
+            <button type="button" class="small" id="dl_${sc.id}" style="display:none;" data-action="download-scene-audio" data-id="${sc.id}">⬇ WAV</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* --- PCM & WAV BINARY ENGINE --- */
+    function extractPcmBytes(uint8Array) {
+      if (uint8Array.length > 12 &&
+          uint8Array[0] === 0x52 && uint8Array[1] === 0x49 &&
+          uint8Array[2] === 0x46 && uint8Array[3] === 0x46) {
+        let offset = 12;
+        const view = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
+        while (offset + 8 <= uint8Array.length) {
+          const chunkId = String.fromCharCode(
+            uint8Array[offset], uint8Array[offset+1], uint8Array[offset+2], uint8Array[offset+3]
+          );
+          const chunkSize = view.getUint32(offset + 4, true);
+          if (chunkId === 'data') {
+            const start = offset + 8;
+            return uint8Array.subarray(start, Math.min(start + chunkSize, uint8Array.length));
+          }
+          offset += 8 + chunkSize;
+        }
+      }
+      return uint8Array;
+    }
+
+    function pcmToWavBlob(pcmBytes, sampleRate = 24000, numChannels = 1) {
+      const byteRate = sampleRate * numChannels * 2;
+      const blockAlign = numChannels * 2;
+      const buffer = new ArrayBuffer(44 + pcmBytes.length);
+      const view = new DataView(buffer);
+      
+      view.setUint32(0, 0x52494646, false); // RIFF
+      view.setUint32(4, 36 + pcmBytes.length, true);
+      view.setUint32(8, 0x57415645, false); // WAVE
+      view.setUint32(12, 0x666d7420, false); // fmt
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // Linear PCM
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true); // 16 bits
+      view.setUint32(36, 0x64617461, false); // data
+      view.setUint32(40, pcmBytes.length, true);
+      
+      new Uint8Array(buffer, 44).set(pcmBytes);
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    /* --- TTS GENERATION --- */
+    async function synthesizeSceneAudio(scene) {
+      const key = getNextApiKey();
+      if (!key) throw new Error("API Key missing. Enter your key in Tab 1.");
+      const model = document.getElementById('ttsModel').value;
+
+      const part = { text: scene.dialogue };
+      if (scene.style) part.speech_metadata = { style: scene.style };
+
+      const payload = {
+        contents: [{ role: "user", parts: [part] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: scene.voice }
+            }
+          }
+        }
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error?.message || `HTTP ${response.status}`);
+      }
+
+      const resData = await response.json();
+      const inlineData = resData.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      if (!inlineData?.data) throw new Error("No audio payload returned from Gemini.");
+
+      const binaryStr = atob(inlineData.data);
+      const rawBytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        rawBytes[i] = binaryStr.charCodeAt(i);
+      }
+
+      const pcmBytes = extractPcmBytes(rawBytes);
+      scene.pcmBytes = pcmBytes;
+      scene.audioBlob = pcmToWavBlob(pcmBytes, 24000, 1);
+      return scene.audioBlob;
+    }
+
+    async function auditionLine(scId) {
+      const sc = generatedScenes.find(s => s.id === scId);
+      if (!sc) return;
+
+      const btn = document.getElementById(`btn_synth_${scId}`);
+      const audioEl = document.getElementById(`audio_${scId}`);
+      const dlBtn = document.getElementById(`dl_${scId}`);
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Voicing...";
+      }
+
+      try {
+        const blob = await synthesizeSceneAudio(sc);
+        const url = URL.createObjectURL(blob);
+        if (audioEl) {
+          audioEl.src = url;
+          audioEl.style.display = "inline-block";
+        }
+        if (dlBtn) dlBtn.style.display = "inline-block";
+
+        if (document.getElementById('audioMastering').value === 'studio') {
+          playWithMastering(blob);
+        } else if (audioEl) {
+          audioEl.play();
+        }
+
+        if (btn) btn.innerText = "🔄 Re-record";
+      } catch (e) {
+        notify("TTS Error: " + e.message, true);
+        if (btn) btn.innerText = "🎙️ Try Again";
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function downloadSceneAudio(scId) {
+      const sc = generatedScenes.find(s => s.id === scId);
+      if (!sc || !sc.audioBlob) return;
+      downloadBlob(sc.audioBlob, `scene_${sc.number}_${sc.character}_${sc.voice}.wav`);
+    }
+
+    async function playWithMastering(blob) {
+      try {
+        const ctx = getAudioContext();
+        const arrayBuf = await blob.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuf);
+        
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+
+        const hpFilter = ctx.createBiquadFilter();
+        hpFilter.type = 'highpass';
+        hpFilter.frequency.value = 80;
+
+        const presence = ctx.createBiquadFilter();
+        presence.type = 'peaking';
+        presence.frequency.value = 3500;
+        presence.Q.value = 1.0;
+        presence.gain.value = 2.0;
+
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.setValueAtTime(-22, ctx.currentTime);
+        comp.knee.setValueAtTime(10, ctx.currentTime);
+        comp.ratio.setValueAtTime(3.5, ctx.currentTime);
+        comp.attack.setValueAtTime(0.003, ctx.currentTime);
+        comp.release.setValueAtTime(0.22, ctx.currentTime);
+
+        const gain = ctx.createGain();
+        gain.gain.value = 1.25;
+
+        source.connect(hpFilter);
+        hpFilter.connect(presence);
+        presence.connect(comp);
+        comp.connect(gain);
+        gain.connect(ctx.destination);
+
+        source.start(0);
+      } catch (e) {
+        console.warn("Fallback to native audio element:", e);
+      }
+    }
+
+    /* --- MASTER AUDIO --- */
+    async function renderMasterAudioTrack() {
+      const keys = getApiKeys();
+      if (!keys.length) return notify("Enter an API key first.", true);
+      if (!generatedScenes.length) return notify("Direct your scenes first.", true);
+
+      const btn = document.getElementById('btnMasterAudio');
+      const player = document.getElementById('masterAudioPlayer');
+      const dlDeviceBtn = document.getElementById('btnDownloadDevice');
+      const upDriveBtn = document.getElementById('btnUploadDrive');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Voicing All Lines...";
+      }
+
+      for (const sc of generatedScenes) {
+        if (!sc.pcmBytes) {
+          try {
+            await synthesizeSceneAudio(sc);
+            const blobUrl = URL.createObjectURL(sc.audioBlob);
+            const audioEl = document.getElementById(`audio_${sc.id}`);
+            const dlBtn = document.getElementById(`dl_${sc.id}`);
+            if (audioEl) { audioEl.src = blobUrl; audioEl.style.display = "inline-block"; }
+            if (dlBtn) dlBtn.style.display = "inline-block";
+          } catch(e) {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerText = "▶ Render Full Master Audio Track";
+            }
+            return notify(`Error in Scene ${sc.number}: ` + e.message, true);
+          }
+        }
+      }
+
+      if (btn) btn.innerText = "⏳ Stitching with 2.5s Pauses...";
+
+      const silenceBytes = new Uint8Array(2.5 * 24000 * 2);
+      let totalLength = 0;
+      generatedScenes.forEach((sc, i) => {
+        totalLength += sc.pcmBytes.length;
+        if (i < generatedScenes.length - 1) totalLength += silenceBytes.length;
+      });
+
+      const masterPcm = new Uint8Array(totalLength);
+      let offset = 0;
+      generatedScenes.forEach((sc, i) => {
+        masterPcm.set(sc.pcmBytes, offset);
+        offset += sc.pcmBytes.length;
+        if (i < generatedScenes.length - 1) {
+          masterPcm.set(silenceBytes, offset);
+          offset += silenceBytes.length;
+        }
+      });
+
+      masterAudioWavBlob = pcmToWavBlob(masterPcm, 24000, 1);
+      const masterUrl = URL.createObjectURL(masterAudioWavBlob);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        masterAudioBase64 = reader.result.split(',')[1];
+      };
+      reader.readAsDataURL(masterAudioWavBlob);
+
+      if (player) {
+        player.src = masterUrl;
+        player.style.display = 'block';
+        player.play();
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = "▶ Re-Render Master Audio Track";
+      }
+
+      if (dlDeviceBtn) {
+        dlDeviceBtn.disabled = false;
+        dlDeviceBtn.style.opacity = "1";
+      }
+      if (upDriveBtn) {
+        upDriveBtn.disabled = false;
+        upDriveBtn.style.opacity = "1";
+      }
+      notify("Master track rendered! Save to Device or Drive.");
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+
+    function downloadMasterAudioToDevice() {
+      if (!masterAudioWavBlob) return notify("Render master audio track first.", true);
+      const title = (document.getElementById('projectTitle').value || 'master_voiceover').replace(/\s+/g, '_');
+      downloadBlob(masterAudioWavBlob, `${title}_master.wav`);
+      notify("Downloading master audio WAV to device...");
+    }
+
+    /* --- CLOUD DB & DRIVE --- */
+    function uploadToGoogleDrive() {
+      if (!isGAS()) return notify("Drive Upload requires Google Apps Script.", true);
+      if (!masterAudioBase64) return notify("Render master audio track first.", true);
+
+      const btn = document.getElementById('btnUploadDrive');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Uploading...";
+      }
+
+      const title = (document.getElementById('projectTitle').value || 'master_voiceover').replace(/\s+/g, '_');
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = "☁️ Saved to Drive!";
+          }
+          if (res.success) {
+            currentMasterDriveUrl = res.fileUrl;
+            const box = document.getElementById('driveResultBox');
+            if (box) {
+              box.style.display = "block";
+              box.innerHTML = `✅ Saved: <a href="${res.fileUrl}" target="_blank" style="color:var(--accent);">Open in Google Drive</a>`;
+            }
+            notify("Master audio saved to Google Drive!");
+          } else {
+            notify("Drive Error: " + res.error, true);
+          }
+        })
+        .withFailureHandler(err => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = "☁️ Save to Google Drive";
+          }
+          notify("Drive Error: " + err.message, true);
+        })
+        .saveMasterAudioToDrive(masterAudioBase64, `${title}_${Date.now()}.wav`);
+    }
+
+    function saveSheetConfig() {
+      const u = document.getElementById('sheetUrlInput').value.trim();
+      const k = document.getElementById('apiKeyInput').value.trim();
+      safeStorage.setItem('flow_sheet_url', u);
+      safeStorage.setItem('flow_api_keys', k);
+
+      if (isGAS()) {
+        notify("Saving and initializing tables in Sheet...");
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) {
+              notify(res.message);
+              if (res.sheetTitle) {
+                const b = document.getElementById('sheetBadge');
+                if (b) b.innerText = res.sheetTitle;
+              }
+            } else {
+              notify("Sheet Error: " + res.error, true);
+            }
+          })
+          .withFailureHandler(err => notify("Error: " + err.message, true))
+          .saveAppSettings({ sheetUrl: u, apiKeys: k });
+      } else {
+        notify("Saved to local browser storage!");
+      }
+    }
+
+    function saveCurrentProductionToSheet() {
+      if (!isGAS()) return notify("Cloud Save requires Google Apps Script.", true);
+      const title = document.getElementById('projectTitle').value;
+      const customUrl = document.getElementById('sheetUrlInput').value.trim();
+
+      const sanitizedScenes = generatedScenes.map(s => ({
+        id: s.id,
+        number: s.number,
+        action: s.action,
+        character: s.character,
+        voice: s.voice,
+        dialogue: s.dialogue,
+        style: s.style,
+        flowPrompt: s.flowPrompt
+      }));
+
+      notify("Saving production to Sheet...");
+      google.script.run
+        .withSuccessHandler(res => {
+          notify(res.message || (res.success ? "Project saved!" : res.error), !res.success);
+        })
+        .withFailureHandler(err => notify("Error: " + err.message, true))
+        .saveProjectToSheet({
+          title,
+          characters,
+          scenes: sanitizedScenes,
+          customSheetUrl: customUrl,
+          audioUrl: currentMasterDriveUrl
+        });
+    }
+
+    function fetchSavedProductions() {
+      if (!isGAS()) return notify("Cloud Load requires Google Apps Script.", true);
+      const c = document.getElementById('savedListContainer');
+      if (c) c.innerHTML = "Fetching...";
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res.projects || !res.projects.length) {
+            if (c) c.innerHTML = "No projects found.";
+            return;
+          }
+          if (c) {
+            c.innerHTML = res.projects.map((p, idx) => `
+              <div style="background:#090d15; border:1px solid var(--border); padding:10px; border-radius:10px; margin-bottom:8px;">
+                <strong>${p.title}</strong> (${p.sceneCount} scenes, ${p.characterCount} actors)<br>
+                <small style="color:var(--text-muted);">${p.timestamp}</small><br>
+                <button type="button" class="small primary" style="margin-top:6px;" data-action="load-project" data-index="${idx}">Load Project</button>
+              </div>
+            `).join('');
+          }
+          window._savedProjects = res.projects;
+          notify(`Loaded ${res.projects.length} saved productions.`);
+        })
+        .withFailureHandler(err => {
+          if (c) c.innerHTML = "Failed to load projects: " + err.message;
+          notify("Error loading projects: " + err.message, true);
+        })
+        .loadProjectsFromSheet(document.getElementById('sheetUrlInput').value.trim());
+    }
+
+    function loadProjectByIndex(idx) {
+      if (!window._savedProjects || !window._savedProjects[idx]) return;
+      const p = window._savedProjects[idx];
+      characters = p.characters;
+      generatedScenes = p.scenes;
+      if (p.audioUrl) currentMasterDriveUrl = p.audioUrl;
+      
+      renderCharacters();
+      renderScenes();
+      renderAudioScenes();
+      switchNav('pane-scenes');
+      notify(`Loaded "${p.title}"!`);
+    }
+
+    function copyAllPromptsJson() {
+      safeCopy(JSON.stringify(generatedScenes, null, 2), "All Prompts JSON");
+    }
+
+    /* --- EVENT DELEGATION SYSTEM --- */
+    let lastTouchTarget = null;
+    let lastTouchTime = 0;
+
+    function handleStudioAction(target, evt) {
+      const actionEl = target.closest('[data-action], .nav-btn, [data-pane]');
+      if (!actionEl) return;
+
+      const now = Date.now();
+      if (evt.type === 'click' && actionEl === lastTouchTarget && (now - lastTouchTime) < 600) {
+        return;
+      }
+      if (evt.type === 'touchend') {
+        lastTouchTarget = actionEl;
+        lastTouchTime = now;
+      }
+
+      const targetPane = actionEl.getAttribute('data-pane');
+      const action = actionEl.getAttribute('data-action');
+
+      if (action === 'switch-nav' || targetPane) {
+        if (targetPane) switchNav(targetPane);
+        return;
+      }
+
+      switch (action) {
+        case 'auto-direct':
+          triggerAutoDirector();
+          break;
+        case 'manual-split':
+          runManualStoryboardSplit();
+          break;
+        case 'add-character':
+          addCharacter();
+          break;
+        case 'refresh-prompts':
+          updatePromptsWithStyles();
+          break;
+        case 'copy-all-json':
+          copyAllPromptsJson();
+          break;
+        case 'render-master-audio':
+          renderMasterAudioTrack();
+          break;
+        case 'download-master-device':
+          downloadMasterAudioToDevice();
+          break;
+        case 'upload-drive':
+          uploadToGoogleDrive();
+          break;
+        case 'save-sheet-config':
+          saveSheetConfig();
+          break;
+        case 'save-project-sheet':
+          saveCurrentProductionToSheet();
+          break;
+        case 'fetch-saved':
+          fetchSavedProductions();
+          break;
+        case 'remove-char': {
+          const id = actionEl.getAttribute('data-id');
+          if (id) removeCharacter(id);
+          break;
+        }
+        case 'copy-turnaround': {
+          const id = actionEl.getAttribute('data-id');
+          if (id) copyTurnaroundSheet(id);
+          break;
+        }
+        case 'copy-scene-prompt': {
+          const idx = parseInt(actionEl.getAttribute('data-index'), 10);
+          if (!isNaN(idx)) copyScenePrompt(idx);
+          break;
+        }
+        case 'audition-line': {
+          const id = actionEl.getAttribute('data-id');
+          if (id) auditionLine(id);
+          break;
+        }
+        case 'download-scene-audio': {
+          const id = actionEl.getAttribute('data-id');
+          if (id) downloadSceneAudio(id);
+          break;
+        }
+        case 'load-project': {
+          const idx = parseInt(actionEl.getAttribute('data-index'), 10);
+          if (!isNaN(idx)) loadProjectByIndex(idx);
+          break;
+        }
+      }
+    }
+
+    document.addEventListener('click', (e) => handleStudioAction(e.target, e), true);
+    document.addEventListener('touchend', (e) => handleStudioAction(e.target, e), { passive: true });
+
+    document.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t.id === 'apiKeyInput') {
+        saveLocalKey();
+      } else if (t.id === 'directorModel') {
+        const customInput = document.getElementById('customDirectorModel');
+        if (customInput) customInput.style.display = (t.value === 'custom') ? 'block' : 'none';
+      } else if (t.getAttribute('data-change') === 'char-prop') {
+        const id = t.getAttribute('data-id');
+        const prop = t.getAttribute('data-prop');
+        if (id && prop) updateChar(id, prop, t.value);
+      }
+    });
+
+    document.addEventListener('focusout', (e) => {
+      const t = e.target;
+      if (t.getAttribute('data-blur') === 'update-dialogue') {
+        const id = t.getAttribute('data-id');
+        if (id) updateSceneText(id, t.innerText || '');
+      }
+    });
+
+    window.switchNav = switchNav;
+    window.triggerAutoDirector = triggerAutoDirector;
+    window.runManualStoryboardSplit = runManualStoryboardSplit;
+    window.addCharacter = addCharacter;
+    window.removeCharacter = removeCharacter;
+    window.updateChar = updateChar;
+    window.copyTurnaroundSheet = copyTurnaroundSheet;
+    window.updatePromptsWithStyles = updatePromptsWithStyles;
+    window.copyScenePrompt = copyScenePrompt;
+    window.updateSceneText = updateSceneText;
+    window.auditionLine = auditionLine;
+    window.downloadSceneAudio = downloadSceneAudio;
+    window.renderMasterAudioTrack = renderMasterAudioTrack;
+    window.downloadMasterAudioToDevice = downloadMasterAudioToDevice;
+    window.uploadToGoogleDrive = uploadToGoogleDrive;
+    window.saveSheetConfig = saveSheetConfig;
+    window.saveCurrentProductionToSheet = saveCurrentProductionToSheet;
+    window.fetchSavedProductions = fetchSavedProductions;
+    window.loadProjectByIndex = loadProjectByIndex;
+    window.copyAllPromptsJson = copyAllPromptsJson;
+    window.saveLocalKey = saveLocalKey;
+
+    function initApp() {
+      try {
+        const cachedKey = safeStorage.getItem('flow_api_keys') || '';
+        const cachedSheet = safeStorage.getItem('flow_sheet_url') || '';
+        
+        const keyInput = document.getElementById('apiKeyInput');
+        const sheetInput = document.getElementById('sheetUrlInput');
+        if (keyInput && cachedKey) keyInput.value = cachedKey;
+        if (sheetInput && cachedSheet) sheetInput.value = cachedSheet;
+        
+        renderCharacters();
+
+        if (isGAS()) {
+          try {
+            google.script.run
+              .withSuccessHandler((res) => {
+                if (res && res.success) {
+                  if (res.apiKeys && keyInput) {
+                    keyInput.value = res.apiKeys;
+                    safeStorage.setItem('flow_api_keys', res.apiKeys);
+                  }
+                  if (res.sheetUrl && sheetInput) {
+                    sheetInput.value = res.sheetUrl;
+                    safeStorage.setItem('flow_sheet_url', res.sheetUrl);
+                  }
+                  if (res.sheetTitle) {
+                    const badge = document.getElementById('sheetBadge');
+                    if (badge) badge.innerText = res.sheetTitle;
+                  }
+                }
+              })
+              .withFailureHandler(err => {
+                const badge = document.getElementById('sheetBadge');
+                if (badge) badge.innerText = "Sheet Offline";
+              })
+              .getAppSettings();
+          } catch(e) {
+            console.warn("GAS init call failed:", e);
+          }
+        } else {
+          const badge = document.getElementById('sheetBadge');
+          if (badge) badge.innerText = "Standalone Mode";
+        }
+      } catch(err) {
+        console.error("Init error:", err);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
